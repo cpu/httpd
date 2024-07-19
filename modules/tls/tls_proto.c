@@ -421,6 +421,8 @@ tls_proto_conf_t *tls_proto_init(apr_pool_t *pool, server_rec *s)
 {
     tls_proto_conf_t *conf;
     tls_cipher_t *cipher;
+    const rustls_crypto_provider *default_provider = NULL;
+    const rustls_supported_ciphersuites *rustls_suites = NULL;
     const rustls_supported_ciphersuite *rustls_suite;
     rustls_cipher_t *rcipher;
     apr_uint16_t id;
@@ -445,10 +447,24 @@ tls_proto_conf_t *tls_proto_init(apr_pool_t *pool, server_rec *s)
         }
     }
 
+    default_provider = rustls_crypto_provider_default();
+    if (NULL == default_provider) {
+        // TODO(@cpu): consider how best to handle an error here.
+        conf = NULL;
+        goto finish;
+    }
+
+    rustls_suites = rustls_crypto_provider_ciphersuites(default_provider);
+    if (NULL == rustls_suites) {
+        // TODO(@cpu): consider how best to handle an error here.
+        conf = NULL;
+        goto finish;
+    }
+
     conf->supported_cipher_ids = apr_array_make(pool, 10, sizeof(apr_uint16_t));
     conf->rustls_ciphers_by_id = apr_hash_make(pool);
     i = 0;
-    while ((rustls_suite = rustls_all_ciphersuites_get_entry(i++))) {
+    while ((rustls_suite = rustls_supported_ciphersuites_get(rustls_suites, i++))) {
         id = rustls_supported_ciphersuite_get_suite(rustls_suite);
         rcipher = apr_pcalloc(pool, sizeof(*rcipher));
         rcipher->id = id;
@@ -457,6 +473,10 @@ tls_proto_conf_t *tls_proto_init(apr_pool_t *pool, server_rec *s)
         apr_hash_set(conf->rustls_ciphers_by_id, &rcipher->id, sizeof(apr_uint16_t), rcipher);
 
     }
+
+finish:
+    if (default_provider) rustls_crypto_provider_free(default_provider);
+    if (rustls_suites) rustls_supported_ciphersuites_free(rustls_suites);
 
     return conf;
 }

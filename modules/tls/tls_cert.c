@@ -149,13 +149,32 @@ static apr_status_t make_certified_key(
     const tls_data_t *cert_pem, const tls_data_t *pkey_pem,
     const rustls_certified_key **pckey)
 {
+    const rustls_crypto_provider *default_provider = NULL;
+    rustls_signing_key *signing_key = NULL;
     const rustls_certified_key *ckey = NULL;
     rustls_result rr = RUSTLS_RESULT_OK;
     apr_status_t rv = APR_SUCCESS;
 
+    default_provider = rustls_crypto_provider_default();
+    if (NULL == default_provider) {
+        rv = APR_EGENERAL;
+        ap_log_perror(APLOG_MARK, APLOG_ERR, rv, p, APLOGNO(10363)
+        "No available rustls default crypto provider %s", name);
+    }
+
+    rr = rustls_crypto_provider_load_key(default_provider, pkey_pem->data, pkey_pem->len, &signing_key);
+    if (RUSTLS_RESULT_OK != rr) {
+        const char *err_descr;
+        rv = tls_util_rustls_error(p, rr, &err_descr);
+        ap_log_perror(APLOG_MARK, APLOG_ERR, rv, p, APLOGNO(10363)
+                     "Failed to load signing key %s: [%d] %s",
+                     name, (int)rr, err_descr);
+        goto finish;
+    }
+
     rr = rustls_certified_key_build(
         cert_pem->data, cert_pem->len,
-        pkey_pem->data, pkey_pem->len,
+        signing_key,
         &ckey);
 
     if (RUSTLS_RESULT_OK != rr) {
@@ -165,11 +184,21 @@ static apr_status_t make_certified_key(
                      "Failed to load certified key %s: [%d] %s",
                      name, (int)rr, err_descr);
     }
+
+    finish:
     if (APR_SUCCESS == rv) {
         *pckey = ckey;
     }
-    else if (ckey) {
-        rustls_certified_key_free(ckey);
+    else {
+        if (signing_key) {
+            rustls_signing_key_free(signing_key);
+        }
+        if (default_provider) {
+            rustls_crypto_provider_free(default_provider);
+        }
+        if (ckey) {
+            rustls_certified_key_free(ckey);
+        }
     }
     return rv;
 }
