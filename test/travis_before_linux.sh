@@ -159,9 +159,11 @@ fi
 if test -v TEST_MOD_TLS -a -v RUSTLS_VERSION; then
     if ! test -d $HOME/root/rustls; then
         RUSTLS_HOME="$HOME/build/rustls-ffi"
-        git clone -q --depth=1 -b "$RUSTLS_VERSION" https://github.com/rustls/rustls-ffi.git "$RUSTLS_HOME"
+        # TODO(@cpu): Restore once rustls-ffi 0.14.0 is ready
+        # git clone -q --depth=1 -b "$RUSTLS_VERSION" https://github.com/rustls/rustls-ffi.git "$RUSTLS_HOME"
+        git clone -q --depth=1 -b "cpu-366-choose-your-own-crypto-adventure" https://github.com/cpu/rustls-ffi.git "$RUSTLS_HOME"
         pushd "$RUSTLS_HOME"
-            make install DESTDIR="$HOME/root/rustls"
+            make install DESTDIR="$HOME/root/rustls" CRYPTO_PROVIDER=ring
         popd
     fi
 fi
