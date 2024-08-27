@@ -468,7 +468,7 @@ tls_proto_conf_t *tls_proto_init(apr_pool_t *pool, server_rec *s)
     }
 
 finish:
-    if (rustls_suites) rustls_supported_ciphersuites_free(rustls_suites);
+    //if (rustls_suites) rustls_supported_ciphersuites_free(rustls_suites);
 
     return conf;
 }
