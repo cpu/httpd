@@ -357,7 +357,7 @@ cleanup:
 }
 
 /**
- * The connection filter converting TLS encrypted network data into plain, unencrpyted
+ * The connection filter converting TLS encrypted network data into plain, unencrypted
  * traffic data to be processed by filters above it in the filter chain.
  *
  * Unfortunately, Apache's filter infrastructure places a heavy implementation
@@ -620,7 +620,7 @@ static apr_status_t fout_pass_buf_to_rustls(
 
     while (len) {
         /* check if we will exceed the limit of data in rustls.
-         * rustls does not guarantuee that it will accept all data, so we
+         * rustls does not guarantee that it will accept all data, so we
          * iterate and flush when needed. */
         if (fctx->fout_bytes_in_rustls + (apr_off_t)len > (apr_off_t)fctx->fout_max_in_rustls) {
             rv = fout_pass_rustls_to_tls(fctx);
@@ -810,7 +810,7 @@ static apr_status_t fout_append_plain(tls_filter_ctx_t *fctx, apr_bucket *b)
                  *   the file handle directly and uses sendfile() when the OS supports it.
                  * - But there is not sendfile() for TLS (netflix did some experiments).
                  * So.
-                 * rustls will try to collect max length traffic data into ont TLS
+                 * rustls will try to collect max length traffic data into one TLS
                  * message, but it can only work with what we gave it. If we give it buffers
                  * that fit what it wants to assemble already, its work is much easier.
                  *
@@ -949,7 +949,7 @@ int tls_filter_pre_conn_init(conn_rec *c)
      * to the filter "below" our filter. That will be other registered
      * filters and last, but not least, the network filter on the socket.
      *
-     * Therefore, wenn we need to read/write TLS data during handshake, we can
+     * Therefore, when we need to read/write TLS data during handshake, we can
      * pass the data to/call on ->next- Since ->next can change during the setup of
      * a connections (other modules register also sth.), we keep the ap_filter_t*
      * returned here, since httpd core will update the ->next whenever someone
