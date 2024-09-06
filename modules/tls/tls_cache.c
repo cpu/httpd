@@ -29,6 +29,7 @@
 #include "tls_conf.h"
 #include "tls_core.h"
 #include "tls_cache.h"
+#include "tls_util.h"
 
 extern module AP_MODULE_DECLARE_DATA tls_module;
 APLOG_USE_MODULE(tls);
@@ -246,6 +247,9 @@ static rustls_result tls_cache_get(
             klen, apr_hashfunc_default((const char*)kdata, &n), vlen);
     }
     if (remove_after || (APR_SUCCESS != rv && !APR_STATUS_IS_NOTFOUND(rv))) {
+		apr_ssize_t n = klen;
+		ap_log_cerror(APLOG_MARK, APLOG_TRACE4, rv, c, "retrieve key %d[%8x], removing due to remove_after=%d rv=%d",
+            klen, apr_hashfunc_default((const char*)kdata, &n), remove_after, rv);
         sc->global->session_cache_provider->remove(
             sc->global->session_cache, cc->server, key->data, klen, c->pool);
     }
@@ -293,18 +297,29 @@ static rustls_result tls_cache_put(
     return RUSTLS_RESULT_OK;
 
 not_stored:
+	ap_log_cerror(APLOG_MARK, APLOG_TRACE4, rv, c,
+            "wasn't able to store %d key bytes, with %d val bytes - rv: %d", klen, vlen, rv);
     return RUSTLS_RESULT_NOT_FOUND;
 }
 
 apr_status_t tls_cache_init_server(
     rustls_server_config_builder *builder, server_rec *s)
 {
+	apr_status_t rv = APR_SUCCESS;
+	rustls_result rr = RUSTLS_RESULT_OK;
     tls_conf_server_t *sc = tls_conf_server_get(s);
 
     if (sc && sc->global->session_cache) {
         ap_log_error(APLOG_MARK, APLOG_TRACE3, 0, s, "adding session persistence to rustls");
-        rustls_server_config_builder_set_persistence(
+        rr = rustls_server_config_builder_set_persistence(
             builder, tls_cache_get, tls_cache_put);
+		if (RUSTLS_RESULT_OK != rr) {
+			const char *err_descr = NULL;
+        	rv = tls_util_rustls_error(s->process->pool, rr, &err_descr);
+        	ap_log_error(APLOG_MARK, APLOG_DEBUG, rv, s, APLOGNO(10335)
+                 "Failed to set session persistence for server %s: [%d] %s",
+                 s->server_hostname, (int)rr, err_descr);
+		}
     }
-    return APR_SUCCESS;
+    return rv;
 }
