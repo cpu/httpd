@@ -161,7 +161,7 @@ if test -v TEST_MOD_TLS -a -v RUSTLS_VERSION; then
         RUSTLS_HOME="$HOME/build/rustls-ffi"
         git clone -q --depth=1 -b "$RUSTLS_VERSION" https://github.com/rustls/rustls-ffi.git "$RUSTLS_HOME"
         pushd "$RUSTLS_HOME"
-            make install DESTDIR="$HOME/root/rustls"
+            make install DESTDIR="$HOME/root/rustls" CRYPTO_PROVIDER=ring
         popd
     fi
 fi
