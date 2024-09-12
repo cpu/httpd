@@ -910,7 +910,6 @@ cleanup:
                      cc->server->server_hostname, hostname, (int)rr, err_descr);
         c->aborted = 1;
         cc->state = TLS_CONN_ST_DISABLED;
-        goto cleanup;
     }
     return rv;
 }
